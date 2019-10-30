@@ -13,6 +13,7 @@ bin
 /build/
 *.exe
 !.paket/paket.bootstrapper.exe
+/packages/
 
 ### Rider ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
