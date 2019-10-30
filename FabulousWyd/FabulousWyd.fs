@@ -8,6 +8,8 @@ open System.Diagnostics
 open Fabulous
 open Fabulous.XamarinForms
 open Xamarin.Forms
+open Xamarin.Forms
+open Xamarin.Forms
 
 module App =
     let shellRef = ViewRef<Shell>()
@@ -41,6 +43,68 @@ module App =
         | ReloadMobs -> { model with Mobs = [] }, [ LoadMobs (model.Index |> List.filter (fun x -> x.Type = "mob") |> List.map (fun x -> x.Name)) ]
 
     let view (model: Model) dispatch =
+        let mobCard (mob: Mob) =
+            Grid.grid [
+                Grid.Rows [ GridLength.Auto; GridLength.Star ]
+                Grid.Columns [ GridLength.Auto; GridLength.Star ]
+                Grid.Children [
+                    Frame.frame [
+                        Frame.GridColumn 0
+                        Frame.GridRow 0
+                        Frame.BackgroundColor <| Color.FromHex "#aac8df"
+                        Frame.Content <|
+                            Grid.grid [
+                                Grid.Rows [ GridLength.Auto ]
+                                Grid.Columns [ GridLength.Auto; GridLength.Auto; GridLength.Auto ]
+                                Grid.Children [
+                                    Label.label [
+                                        Label.Text mob.Name
+                                        Label.FontAttributes FontAttributes.Bold
+                                        Label.GridColumn 0
+                                        Label.GridRow 0
+                                    ]
+                                    Label.label [
+                                        Label.Text <| sprintf "Lvl - %i" mob.Level
+                                        Label.GridColumn 1
+                                        Label.GridRow 0
+                                    ]
+                                    Label.label [
+                                        Label.Text <| sprintf "HP - %i" mob.Hp
+                                        Label.GridColumn 2
+                                        Label.GridRow 0
+                                    ]
+                                ]
+                            ]
+                    ]
+                    Frame.frame [
+                        Frame.GridColumn 0
+                        Frame.GridRow 1
+                        Frame.Content <|
+                            Grid.grid [
+                                Grid.Rows [ GridLength.Auto ]
+                                Grid.Columns [ GridLength.Star ]
+                                Grid.Children [
+                                    FlexLayout.flexLayout [
+                                        FlexLayout.GridRow 0
+                                        FlexLayout.Wrap FlexWrap.Wrap
+                                        FlexLayout.BackgroundColor <| Color.FromHex "#daeaf4"
+                                        FlexLayout.Children [
+                                            for i in mob.Drops |> List.sortBy (fun x -> x.RarityLevel) do
+                                                yield Label.label [
+                                                    Label.Text <| i.Name.Replace("_", " ")
+                                                    Label.TextColor i.RarityColor
+                                                    Label.MarginThickness <| Thickness(3., 1.)
+                                                    Label.FontAttributes FontAttributes.Bold
+                                                ]
+                                                yield Label.label [ Label.Text " | " ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                    ]
+                ]
+            ]
+            
         Shell.shell [
             Shell.Ref shellRef
             Shell.Items [
@@ -72,7 +136,7 @@ module App =
                                                                 if model.Index.Length = 0 then "Carregando indexes, por favor aguarde..."
                                                                 elif model.Maps.Length = 0 then "Carregando mapas, por favor aguarde..."
                                                                 elif model.Mobs.Length = 0 then "Carregando mobs, por favor aguarde..."
-                                                                else ""
+                                                                else "Tudo pronto. Só escolher o mapa no menu."
                                                         ]
                                                     ]
                                                 ]
@@ -94,28 +158,30 @@ module App =
                                     ShellContent.shellContent [
                                         ShellContent.Content <|
                                             ContentPage.contentPage [
+                                                ContentPage.Title i.Name
                                                 ContentPage.Content <|
                                                     ScrollView.scrollView [
                                                         ScrollView.Content <|
                                                             StackLayout.stackLayout [
                                                                 StackLayout.Children [
+                                                                    yield StackLayout.stackLayout [
+                                                                        StackLayout.Orientation StackOrientation.Horizontal
+                                                                        StackLayout.Children [
+                                                                            Label.label [ Label.Text "Legenda: "; Label.FontAttributes FontAttributes.Bold ]
+                                                                            Label.label [ Label.Text "Muito Fácil; "; Label.TextColor Color.Black; Label.FontAttributes FontAttributes.Bold ]
+                                                                            Label.label [ Label.Text "Fácil; "; Label.TextColor Color.Green; Label.FontAttributes FontAttributes.Bold ]
+                                                                            Label.label [ Label.Text "Médio; "; Label.TextColor Color.DarkBlue; Label.FontAttributes FontAttributes.Bold ]
+                                                                            Label.label [ Label.Text "Difícil; "; Label.TextColor Color.DarkRed; Label.FontAttributes FontAttributes.Bold ]
+                                                                            Label.label [ Label.Text "Raro; "; Label.TextColor Color.Purple; Label.FontAttributes FontAttributes.Bold ]
+                                                                        ]
+                                                                    ]
                                                                     for m in i.Mobs do
                                                                         let mob = model.Mobs |> List.tryFind (fun x -> x.Name = m.Name)
                                                                         match mob with
                                                                         | None -> yield ActivityIndicator.activityIndicator [ ActivityIndicator.IsRunning true ]
-                                                                        | Some m ->
-                                                                            if not m.Drops.IsEmpty then
-                                                                                yield Label.label [ Label.Text m.Name ]
-                                                                                for d in m.Drops do
-                                                                                    let raridade =
-                                                                                        match d.Rarity with
-                                                                                        | "veryeasy" -> "Muito Fácil"
-                                                                                        | "easy" -> "Fácil"
-                                                                                        | "medium" -> "Mediano"
-                                                                                        | "hard" -> "Dificil"
-                                                                                        | "rare" -> "Raro"
-                                                                                        | _ -> ""
-                                                                                    yield Label.label [ Label.Text <| sprintf "%s - %s" d.Name raridade; Label.TextColor Color.Green ]
+                                                                        | Some mob ->
+                                                                            if not mob.Drops.IsEmpty then
+                                                                                yield mobCard mob
                                                                 ]
                                                             ]
                                                     ]

@@ -1,10 +1,12 @@
 module Domain
 
+open System
 open System.Diagnostics
 open FSharp.Data
 open LiteDB
 open LiteDB.FSharp
 open Newtonsoft.Json
+open Xamarin.Forms
 
 let ApiAll = "https://wydmisc.raidhut.com.br/droplist/global-br/data/all.json"
 let ApiAllMaps = "https://wydmisc.raidhut.com.br/droplist/global-br/data/map.json"
@@ -28,7 +30,16 @@ type Item =
     { Id: ItemId
       Index: int
       Name: string
-      Rarity: string }
+      Rarity: string
+      RarityLevel: int }
+    member this.RarityColor =
+        match this.Rarity with
+        | "veryeasy" -> Color.Black
+        | "easy" -> Color.Green
+        | "medium" -> Color.DarkBlue
+        | "hard" -> Color.DarkRed
+        | "rare" -> Color.Purple
+        | _ -> Color.Transparent
     
 [<CLIMutable>]
 type Mob =
