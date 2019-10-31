@@ -24,6 +24,9 @@ module App =
         | LoadIndex -> Index.LoadIndex sqlPath |> Cmd.ofAsyncMsg
         | LoadMaps maps -> Map.LoadMaps sqlPath maps |> Cmd.ofAsyncMsg
         | LoadMobs mobs -> Mob.LoadMobs sqlPath mobs |> Cmd.ofAsyncMsg
+        | EraseDabatase ->
+            do EraseDatabase sqlPath
+            DatabaseErased |> Cmd.ofMsg
     
     let initModel = { Index = []; Maps = []; Mobs = [] }
 
@@ -37,11 +40,11 @@ module App =
             { model with Maps = maps }, [LoadMobs (model.Index |> List.filter (fun x -> x.Type = "mob") |> List.map (fun x -> x.Name))]
         | MobsLoaded mobs ->
             { model with Mobs = mobs }, []
+        | ReloadFromServer ->
+            initModel, [ EraseDabatase ]
+        | DatabaseErased ->
+            model, [ LoadIndex ]
         
-        | ReloadIndexes -> { model with Index = [] }, [ LoadIndex ]
-        | ReloadMapas -> { model with Maps = [] }, [ LoadMaps (model.Index |> List.filter (fun x -> x.Type = "map") |> List.map (fun x -> x.Name)) ]
-        | ReloadMobs -> { model with Mobs = [] }, [ LoadMobs (model.Index |> List.filter (fun x -> x.Type = "mob") |> List.map (fun x -> x.Name)) ]
-
     let view (model: Model) dispatch =
         let mobCard (mob: Mob) =
             Grid.grid [
@@ -55,24 +58,30 @@ module App =
                         Frame.Content <|
                             Grid.grid [
                                 Grid.Rows [ GridLength.Auto ]
-                                Grid.Columns [ GridLength.Auto; GridLength.Auto; GridLength.Auto ]
+                                Grid.Columns [ GridLength.Auto; GridLength.Auto; GridLength.Auto; GridLength.Star ]
                                 Grid.Children [
-                                    Label.label [
+                                    yield Label.label [
                                         Label.Text mob.Name
                                         Label.FontAttributes FontAttributes.Bold
                                         Label.GridColumn 0
                                         Label.GridRow 0
                                     ]
-                                    Label.label [
+                                    yield Label.label [
                                         Label.Text <| sprintf "Lvl - %i" mob.Level
                                         Label.GridColumn 1
                                         Label.GridRow 0
                                     ]
-                                    Label.label [
+                                    yield Label.label [
                                         Label.Text <| sprintf "HP - %i" mob.Hp
                                         Label.GridColumn 2
                                         Label.GridRow 0
                                     ]
+                                    if not mob.Pos.IsEmpty then
+                                        yield Label.label [
+                                            Label.Text <| sprintf "1ª Pos - X: %i Y: %i" mob.Pos.Head.x mob.Pos.Head.y
+                                            Label.GridColumn 3
+                                            Label.GridRow 0
+                                        ]
                                 ]
                             ]
                     ]
@@ -87,13 +96,13 @@ module App =
                                     FlexLayout.flexLayout [
                                         FlexLayout.GridRow 0
                                         FlexLayout.Wrap FlexWrap.Wrap
+                                        FlexLayout.JustifyContent FlexJustify.SpaceAround
                                         FlexLayout.BackgroundColor <| Color.FromHex "#daeaf4"
                                         FlexLayout.Children [
                                             for i in mob.Drops |> List.sortBy (fun x -> x.RarityLevel) do
                                                 yield Label.label [
                                                     Label.Text <| i.Name.Replace("_", " ")
                                                     Label.TextColor i.RarityColor
-                                                    Label.MarginThickness <| Thickness(3., 1.)
                                                     Label.FontAttributes FontAttributes.Bold
                                                 ]
                                                 yield Label.label [ Label.Text " | " ]
@@ -117,6 +126,12 @@ module App =
                                 ShellContent.shellContent [
                                     ShellContent.Content <|
                                         ContentPage.contentPage [
+                                            ContentPage.ToolbarItems [
+                                                ToolbarItem.toolbarItem [
+                                                    ToolbarItem.Text "Recarregar dados do servidor"
+                                                    ToolbarItem.OnClick <| fun () -> ReloadFromServer |> dispatch
+                                                ]
+                                            ]
                                             ContentPage.Content <|
                                                 Grid.grid [
                                                     Grid.Rows [ GridLength.Auto; GridLength.Auto ]

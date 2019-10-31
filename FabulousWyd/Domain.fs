@@ -41,6 +41,10 @@ type Item =
         | "rare" -> Color.Purple
         | _ -> Color.Transparent
     
+type MapPosition =
+    { x: int
+      y: int }
+    
 [<CLIMutable>]
 type Mob =
     { Id: MobId
@@ -50,7 +54,8 @@ type Mob =
       Mp: int
       Exp: int
       Maps: Index list
-      Drops: Item list }
+      Drops: Item list
+      Pos: MapPosition list }
 
 [<CLIMutable>]
 type Map =
@@ -62,22 +67,25 @@ type Msg =
     | IndexLoaded of Index list
     | MapsLoaded of Map list
     | MobsLoaded of Mob list
-    
-    | ReloadIndexes
-    | ReloadMapas
-    | ReloadMobs
+    | ReloadFromServer
+    | DatabaseErased
     
 type Cmd =
     | LoadIndex
     | LoadMaps of MapName list
     | LoadMobs of MobName list
+    | EraseDabatase
     
 let fetchFromServer url =
     Http.AsyncRequestString(url)
     
-let GetCollection<'a> (sqlPath:string) =
+let GetDb (sqlPath:string) =
     let mapper = FSharpBsonMapper()
     use db = new LiteDatabase(sqlPath, mapper)
+    db
+    
+let GetCollection<'a> (sqlPath:string) =
+    let db = GetDb sqlPath
     db.GetCollection<'a>()
         
 let Upsert<'a> (sqlPath:string) (item:'a) =
@@ -99,6 +107,10 @@ let GetOneMaybe<'a> (sqlPath:string) (id:string) =
     match box obj with
     | null -> None
     | _ -> Some obj
+    
+let EraseDatabase (sqlPath:string) =
+    let db = GetDb sqlPath
+    db.GetCollectionNames() |> Seq.map db.DropCollection |> ignore
     
 module Index =
     let LoadIndex (sqlPath:string) : Async<Msg> =
